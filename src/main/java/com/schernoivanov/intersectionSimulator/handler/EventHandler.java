@@ -8,6 +8,7 @@ import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLightType;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -55,6 +56,7 @@ public class EventHandler {
         );
 
         trafficLight.setColor(TrafficLightColor.DISABLED);
+        trafficLight.setStopWatch(StopWatch.createStarted());
         trafficLight.getEventQueue().clear();
     }
 
@@ -68,32 +70,46 @@ public class EventHandler {
 
             case RED:
                 trafficLight.setColor(TrafficLightColor.RED);
+                trafficLight.setStopWatch(StopWatch.createStarted());
+
                 log.info("Состояние светофора (id={}, type={}, road_number={})" +
                                 " - {} - движение запрещено",
                         trafficLight.getId(),
                         trafficLight.getTrafficLightType(),
                         trafficLight.getRoadNumber(),
                         TrafficLightColor.RED);
+
                 break;
 
             case GREEN:
                 trafficLight.setColor(TrafficLightColor.GREEN);
-                log.info("Состояние светофора (id={}) - {} - движение разрешено",
+                trafficLight.setStopWatch(StopWatch.createStarted());
+
+                log.info("Состояние светофора (id={}, type={}, road_number={}) - " +
+                                "{} - движение разрешено",
                         trafficLight.getId(),
+                        trafficLight.getTrafficLightType(),
+                        trafficLight.getRoadNumber(),
                         TrafficLightColor.GREEN);
                 break;
 
             case YELLOW:
                 trafficLight.setColor(TrafficLightColor.YELLOW);
-                log.info("Состояние светофора (id={}) - {} - через {} секунд движение запрещается",
+                trafficLight.setStopWatch(StopWatch.createStarted());
+
+                log.info("Состояние светофора (id={}, type={}, road_number={}) " +
+                                "- {} - через {} секунд движение будет запрещено",
                         trafficLight.getId(),
-                        TrafficLightColor.GREEN,
+                        trafficLight.getTrafficLightType(),
+                        trafficLight.getRoadNumber(),
+                        TrafficLightColor.YELLOW,
                         yellowColorDuration);
                 break;
         }
 
-
     }
+
+
 
     private void handleChangeQueueSize(TrafficLight trafficLight, Event<?> event) {
         if (trafficLight.getTrafficLightType().equals(TrafficLightType.VEHICLE)) {

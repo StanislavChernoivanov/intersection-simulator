@@ -6,6 +6,7 @@ import com.schernoivanov.intersectionSimulator.trafficLight.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
@@ -22,6 +23,13 @@ public class IntersectionServiceImpl implements IntersectionService{
     private final Map<Integer, TrafficLight> trafficLights;
 
     private final EventScheduler eventScheduler;
+
+    @Value("${app.traffic-light.default-green-color-duration}")
+    private int greenColorDuration;
+    @Value("${app.traffic-light.default-red-color-duration}")
+    private int redColorDuration;
+    @Value("${app.traffic-light.default-yellow-color-duration}")
+    private int yellowColorDuration;
 
 
     public List<TrafficLight> getAllTrafficLight() {
@@ -57,6 +65,24 @@ public class IntersectionServiceImpl implements IntersectionService{
         trafficLight.setQueueSize(queueSize);
 
         return trafficLight;
+    }
+
+    @Override
+    public String getTrafficLightTimerById(Integer id) {
+
+        TrafficLight trafficLight = getTrafficLightById(id);
+
+        TrafficLightColor currentlyColor = trafficLight.getColor();
+
+        int duration = currentlyColor.equals(TrafficLightColor.RED) ? redColorDuration
+                : currentlyColor.equals(TrafficLightColor.GREEN) ? greenColorDuration
+                :yellowColorDuration;
+
+        trafficLight.getStopWatch().split();
+
+        return MessageFormat.format("Осталось {0} cек",
+            duration - trafficLight.getStopWatch().getSplitDuration().toSeconds()
+        );
     }
 
 

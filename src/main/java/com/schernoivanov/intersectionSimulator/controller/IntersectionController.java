@@ -23,6 +23,7 @@ public class IntersectionController {
 
     @GetMapping
     public ResponseEntity<TrafficLightListDTO> getAllTrafficLights() {
+
         List<TrafficLight> trafficLights = intersectionService.getAllTrafficLight();
         return ResponseEntity.ok(
                 trafficLightMapper.trafficLightListToTrafficLightDTOList(
@@ -43,7 +44,7 @@ public class IntersectionController {
     public ResponseEntity<TrafficLightDTO> changeTrafficLightColorById(@PathVariable Integer id,
                                                                        @RequestParam String newColor) {
 
-        intersectionService.changeTrafficLightColorById(id, newColor);
+        intersectionService.changeTrafficLightColorById(id, newColor.toUpperCase());
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -52,12 +53,20 @@ public class IntersectionController {
     @PutMapping("/changeQueueSize/{id}")
     public ResponseEntity<TrafficLightDTO> changeQueueSizeById(@PathVariable Integer id,
                                                                @RequestParam int queueSize) {
+
         TrafficLight trafficLight = intersectionService.changeQueueSizeById(id, queueSize);
         if(trafficLight == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+
         return ResponseEntity.ok(trafficLightMapper.trafficLightToDTO(
                 trafficLight
         ));
+    }
+
+    @GetMapping("/timer/{id}")
+    public ResponseEntity<String> getTimer(@PathVariable Integer id) {
+
+        return ResponseEntity.ok(intersectionService.getTrafficLightTimerById(id));
     }
 }

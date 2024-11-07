@@ -3,10 +3,7 @@ import com.schernoivanov.intersectionSimulator.event.Event;
 import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLight;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -25,7 +22,7 @@ public class EventsConsumerStarter {
 
 
     @PostConstruct
-    public void startTrafficLightsWorking() {
+    public void startEventHandling() {
         trafficLights.values().forEach(tl -> {
             Thread thread = new Thread(() -> {
                 while (true) {
@@ -43,6 +40,7 @@ public class EventsConsumerStarter {
             thread.start();
         });
     }
+
 
 
 

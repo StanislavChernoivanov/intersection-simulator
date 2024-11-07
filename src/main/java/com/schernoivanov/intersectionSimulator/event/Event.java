@@ -15,7 +15,7 @@ public abstract class Event<T>{
     private T eventData;
 
     @Setter
-    private EventType eventType;
+    protected EventType eventType;
 
 
     public Event(Integer trafficLightFromId, Integer trafficLightToId, T eventData) {

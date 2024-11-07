@@ -5,13 +5,15 @@ import com.schernoivanov.intersectionSimulator.event.DisableTrafficLightEvent;
 import com.schernoivanov.intersectionSimulator.event.Event;
 import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLight;
 import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLightColor;
+import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLightType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -36,173 +38,242 @@ public class EventScheduler {
     public static boolean isWork = true;
 
 
+
+
+
     public void scheduleSendEventForDisablingAllTrafficLights(TrafficLight trafficLightSender,
                                                               long delay) {
 
         ScheduledExecutorService scheduledThreadPool =
-                trafficLightSender.getScheduledThreadPool();
+                trafficLightSender.getScheduler();
 
-        trafficLights.values().stream().filter(tl -> !tl.getId().equals(trafficLightSender.getId()))
-                .forEach(tl -> new Thread(() -> {
+        trafficLights.values().forEach(tl -> new Thread(() -> {
 
                     Event<String> event = new DisableTrafficLightEvent(
                             trafficLightSender.getId(),
                             tl.getId(),
                             TrafficLightColor.DISABLED.name());
 
-                    log.info(
-                            "Запланировано отключение светофора (id={}, type={}, road_number={}) " +
-                                    "через {} секунды...",
-                            tl.getId(),
-                            tl.getTrafficLightType(),
-                            tl.getRoadNumber(),
-                            delay);
-
-                    scheduledThreadPool.schedule(
-                            () -> tl.addEvent(event),
+                    SchedulingUtils.scheduleDisablingTrafficLightEventSending(tl,
                             delay,
-                            TimeUnit.SECONDS
-                    );
+                            scheduledThreadPool,
+                            event);
+
                 }).start());
     }
 
 
+
+
+
     public void scheduleSendEventForEnablingAllTrafficLights(TrafficLight trafficLightSender,
+                                                             TrafficLight trafficLightReceiver,
                                                              TrafficLightColor scheduledColor,
+                                                             boolean isFirstEnabling,
                                                              long delay) {
 
         boolean isEven = trafficLightSender.getId() % 2 == 0;
 
         String logInfoSchedulingTrafficLightEnabling =
-                "Запланировано включение {} сигнала светофора светофора " +
+                "Запланировано включение {} сигнала светофора " +
                         "(id={}, type={}, road_number={}) " +
                         "через {} секунды...";
 
-        ScheduledExecutorService scheduledThreadPool =
-                trafficLightSender.getScheduledThreadPool();
+        ScheduledExecutorService scheduler =
+                trafficLightSender.getScheduler();
 
-        trafficLights.values().stream().filter(tl -> !tl.getId().equals(trafficLightSender.getId())
-                        && (tl.getId() % 2 == 0) == isEven)
-                .forEach(tl -> new Thread(() -> {
+        if(!isFirstEnabling) { // Является ли включение светофора первым
 
-                    Event<String> event = new ChangeTrafficLightColorEvent(
-                            trafficLightSender.getId(),
-                            tl.getId(),
-                            scheduledColor.name()
-                    );
+            Event<String> event = new ChangeTrafficLightColorEvent(
+                        trafficLightSender.getId(),
+                        trafficLightReceiver.getId(),
+                        scheduledColor.name()
+                );
 
-                    log.info(logInfoSchedulingTrafficLightEnabling,
-                            scheduledColor,
-                            tl.getId(),
-                            tl.getTrafficLightType(),
-                            tl.getRoadNumber(),
-                            delay);
+                SchedulingUtils.scheduleEnablingTrafficLightEventSending(logInfoSchedulingTrafficLightEnabling, delay,
+                        trafficLightReceiver, scheduledColor, scheduler, event);
 
-                    scheduledThreadPool.schedule(
-                            () -> tl.addEvent(event),
-                            delay,
-                            TimeUnit.SECONDS
-                    );
-                }).start());
+        } else {
 
+            boolean isCompatible = trafficLightSender.getId() % 2 == trafficLightReceiver.getId() % 2;
+            boolean isSameType = trafficLightSender.getTrafficLightType().equals(trafficLightReceiver.getTrafficLightType());
+            boolean isGreen = scheduledColor.equals(TrafficLightColor.GREEN);
+            TrafficLightColor anotherScheduledColor = isGreen ? TrafficLightColor.RED : TrafficLightColor.GREEN;
 
-        trafficLights.values().stream().filter(tl -> !tl.getId().equals(trafficLightSender.getId())
-                        && (tl.getId() % 2 == 0) != isEven)
-                .forEach(tl -> new Thread(() -> {
+            if ((isCompatible && isSameType) || (!isCompatible && !isSameType)) {
 
-                    boolean isGreen = scheduledColor.equals(TrafficLightColor.GREEN);
+                Event<String> event = new ChangeTrafficLightColorEvent(
+                        trafficLightSender.getId(),
+                        trafficLightReceiver.getId(),
+                        scheduledColor.name()
+                );
 
-                    Event<String> event = new ChangeTrafficLightColorEvent(
-                            trafficLightSender.getId(),
-                            tl.getId(),
-                            isGreen ? TrafficLightColor.RED.name() : TrafficLightColor.GREEN.name()
-                    );
+                SchedulingUtils.scheduleEnablingTrafficLightEventSending(logInfoSchedulingTrafficLightEnabling, delay,
+                        trafficLightReceiver, scheduledColor, scheduler, event);
+            } else {
 
-                    log.info(logInfoSchedulingTrafficLightEnabling,
-                            TrafficLightColor.RED,
-                            tl.getId(),
-                            tl.getTrafficLightType(),
-                            tl.getRoadNumber(),
-                            delay);
+                Event<String> event = new ChangeTrafficLightColorEvent(
+                        trafficLightSender.getId(),
+                        trafficLightReceiver.getId(),
+                        anotherScheduledColor.name()
+                );
 
-                    scheduledThreadPool.schedule(
-                            () -> tl.addEvent(event),
-                            3,
-                            TimeUnit.SECONDS
-                    );
-                }).start());
+                SchedulingUtils.scheduleEnablingTrafficLightEventSending(logInfoSchedulingTrafficLightEnabling, delay,
+                        trafficLightReceiver, anotherScheduledColor, scheduler, event);
+            }
+        }
     }
+
+
+
 
     public void lightingControlScheduling(TrafficLight commonTrafficLight, TrafficLightColor color) {
 
-        Event<String> changeTrafficLightColorEvent = new ChangeTrafficLightColorEvent(
-                commonTrafficLight.getId(),
-                commonTrafficLight.getId(),
-                color.name()
-        );
-
-        Event<String> disableTrafficLightEvent = new DisableTrafficLightEvent(
-                commonTrafficLight.getId(),
-                commonTrafficLight.getId(),
-                TrafficLightColor.DISABLED.name());
-
-        ScheduledExecutorService executorService = commonTrafficLight.getScheduledThreadPool();
-
-        executorService.schedule(
-                () -> commonTrafficLight.addEvent(disableTrafficLightEvent),
-                1,
-                TimeUnit.SECONDS);
-
         scheduleSendEventForDisablingAllTrafficLights(commonTrafficLight, 1);
 
-        executorService.schedule(
-                () -> commonTrafficLight.addEvent(changeTrafficLightColorEvent),
-                1,
-                TimeUnit.SECONDS);
-
-        scheduleSendEventForEnablingAllTrafficLights(commonTrafficLight, color, 1);
-
         try {
-            Thread.sleep(TimeUnit.SECONDS.toSeconds(1));
+            TimeUnit.SECONDS.sleep(1);
         } catch (InterruptedException e) {
             log.warn(Arrays.toString(e.getStackTrace()));
         }
+        List<Thread> threads = new ArrayList<>();
+        trafficLights.values().forEach(tl -> {
 
-        new Thread(() -> {
+            Thread thread = new Thread( () -> {
+                scheduleSendEventForEnablingAllTrafficLights(commonTrafficLight,
+                        tl,
+                        color,
+                        true,
+                        5);
+
+                try {
+                    TimeUnit.SECONDS.sleep(5);
+                } catch (InterruptedException e) {
+                    log.warn(Arrays.toString(e.getStackTrace()));
+                }
+            });
+            thread.start();
+            threads.add(thread);
+        });
+
+        threads.forEach(t -> {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                log.info(Arrays.toString(e.getStackTrace()));
+            }
+        });
+
+        new Thread( () -> startTrafficLightsWorking(commonTrafficLight)).start();
+    }
+
+
+
+
+
+    public void startTrafficLightsWorking(TrafficLight commonTrafficLight) {
+
+        trafficLights.values().forEach(tl -> asyncTrafficLightStateChanging(commonTrafficLight, tl));
+    }
+
+
+
+
+
+    private void asyncTrafficLightStateChanging(TrafficLight sender, TrafficLight receiver) {
+
+        new Thread( () -> {
 
             while (isWork) {
-                if (commonTrafficLight.getColor().equals(TrafficLightColor.GREEN)) {
-                    executorService.schedule(
-                            () -> {
-                                changeTrafficLightColorEvent.setEventData(TrafficLightColor.RED.name());
-                                commonTrafficLight.addEvent(changeTrafficLightColorEvent);
-                            },
-                            redColorDuration,
-                            TimeUnit.SECONDS);
+                Thread thread = new Thread(() -> {
 
-                    scheduleSendEventForEnablingAllTrafficLights(
-                            commonTrafficLight,
-                            TrafficLightColor.RED,
-                            redColorDuration);
+                    TrafficLightColor currentlyColor = receiver.getColor();
+                    switch (currentlyColor) {
 
-                } else if (commonTrafficLight.getColor().equals(TrafficLightColor.RED)) {
+                        case GREEN:
 
-                    executorService.schedule(
-                            () -> {
-                                changeTrafficLightColorEvent.setEventData(TrafficLightColor.GREEN.name());
-                                commonTrafficLight.addEvent(changeTrafficLightColorEvent);
-                            },
-                            greenColorDuration,
-                            TimeUnit.SECONDS);
+                            if (receiver.getTrafficLightType().equals(TrafficLightType.VEHICLE)) {
 
-                    scheduleSendEventForEnablingAllTrafficLights(
-                            commonTrafficLight,
-                            TrafficLightColor.GREEN,
-                            greenColorDuration);
+                                scheduleSendEventForEnablingAllTrafficLights(
+                                        sender,
+                                        receiver,
+                                        TrafficLightColor.YELLOW,
+                                        false,
+                                        greenColorDuration);
+
+                                try {
+                                    TimeUnit.SECONDS.sleep(greenColorDuration);
+                                } catch (InterruptedException e) {
+
+                                    log.info(Arrays.toString(e.getStackTrace()));
+                                }
+                            } else {
+
+                                scheduleSendEventForEnablingAllTrafficLights(
+                                        sender,
+                                        receiver,
+                                        TrafficLightColor.RED,
+                                        false,
+                                        greenColorDuration);
+
+                                try {
+                                    TimeUnit.SECONDS.sleep(greenColorDuration);
+                                } catch (InterruptedException e) {
+
+                                    log.info(Arrays.toString(e.getStackTrace()));
+                                }
+                            }
+                            break;
+
+                        case RED:
+
+                            scheduleSendEventForEnablingAllTrafficLights(
+                                    sender,
+                                    receiver,
+                                    TrafficLightColor.GREEN,
+                                    false,
+                                    redColorDuration);
+
+                            try {
+                                TimeUnit.SECONDS.sleep(redColorDuration);
+                            } catch (InterruptedException e) {
+
+                                log.info(Arrays.toString(e.getStackTrace()));
+                            }
+                            break;
+
+                        case YELLOW:
+
+                            scheduleSendEventForEnablingAllTrafficLights(
+                                    sender,
+                                    receiver,
+                                    TrafficLightColor.RED,
+                                    false,
+                                    yellowColorDuration);
+
+                            try {
+                                TimeUnit.SECONDS.sleep(yellowColorDuration);
+                            } catch (InterruptedException e) {
+
+                                log.info(Arrays.toString(e.getStackTrace()));
+                            }
+                            break;
+                    }
+                }
+                );
+                thread.start();
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    log.info(Arrays.toString(e.getStackTrace()));
                 }
             }
 
         }).start();
-
     }
+
+
+
+
+
 }

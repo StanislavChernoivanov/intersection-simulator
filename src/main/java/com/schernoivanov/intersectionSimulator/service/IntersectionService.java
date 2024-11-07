@@ -13,4 +13,6 @@ public interface IntersectionService {
      void changeTrafficLightColorById(Integer id, String newColor);
 
      TrafficLight changeQueueSizeById(Integer id, int queueSize);
+
+     String getTrafficLightTimerById(Integer id);
 }

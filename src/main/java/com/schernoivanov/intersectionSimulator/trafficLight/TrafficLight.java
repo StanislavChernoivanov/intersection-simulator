@@ -2,6 +2,7 @@ package com.schernoivanov.intersectionSimulator.trafficLight;
 
 import com.schernoivanov.intersectionSimulator.event.Event;
 import lombok.*;
+import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.concurrent.BlockingQueue;
@@ -29,12 +30,17 @@ public class TrafficLight {
     @Value("app.queue.default-queue-size")
     private int queueSize;
 
-    private final ScheduledExecutorService scheduledThreadPool;
+    private final ScheduledExecutorService scheduler;
+
+    @Setter
+    private StopWatch stopWatch;
 
     public TrafficLight() {
 
-        scheduledThreadPool =
+        scheduler =
                 Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
+
+
     }
 
 
