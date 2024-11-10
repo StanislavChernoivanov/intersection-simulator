@@ -12,14 +12,18 @@ public interface TrafficLightMapper {
 
     TrafficLightDTO trafficLightToDTO(TrafficLight trafficLight);
 
-    TrafficLight dtoToTrafficLight(TrafficLightDTO dto);
+
 
     List<TrafficLightDTO> trafficLightListToDTOList(List<TrafficLight> trafficLights);
+
+
 
     default TrafficLightListDTO trafficLightListToTrafficLightDTOList(List<TrafficLight> trafficLights) {
         TrafficLightListDTO trafficLightListDTO = new TrafficLightListDTO();
         trafficLightListDTO.setTrafficLights(trafficLightListToDTOList(trafficLights));
         return trafficLightListDTO;
+
+
     }
 
 

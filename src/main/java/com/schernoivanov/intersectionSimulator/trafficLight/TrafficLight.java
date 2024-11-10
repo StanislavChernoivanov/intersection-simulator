@@ -1,9 +1,9 @@
 package com.schernoivanov.intersectionSimulator.trafficLight;
 
 import com.schernoivanov.intersectionSimulator.event.Event;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.time.StopWatch;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -18,13 +18,13 @@ public class TrafficLight {
 
     private int oppositeTrafficLightId;
 
-    private int [] perpendicularTrafficLightIds;
+    private int[] perpendicularTrafficLightIds;
 
     protected TrafficLightType trafficLightType;
 
     private RoadNumber roadNumber;
 
-    private  TrafficLightColor color;
+    private TrafficLightColor color;
 
     private BlockingQueue<Event<?>> eventQueue;
 
@@ -41,40 +41,40 @@ public class TrafficLight {
     private String timer;
 
 
-
-
     public TrafficLight() {
-        stopWatch = new StopWatch();
-
-        stopWatch.start();
-
 
         scheduler =
                 Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
-        Thread thread = new Thread( () -> {
+        Thread thread = new Thread(() -> {
 
-            currentlyQueueSize = queueSize;
+            while (true) {
 
-            while( true) {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(300);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
 
-                while (c==color.equals(TrafficLightColor.GREEN)) {
+                currentlyQueueSize = queueSize;
+
+                while (color != null && color.equals(TrafficLightColor.GREEN)) {
 
                     try {
-                        TimeUnit.SECONDS.sleep(3);
+                        TimeUnit.SECONDS.sleep(4);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                     if (currentlyQueueSize > 0) {
-                        queueSize--;
+                        currentlyQueueSize--;
                     }
                 }
             }
         });
+
         thread.setDaemon(true);
         thread.start();
     }
-
 
 
     public void addEvent(Event<?> event) {

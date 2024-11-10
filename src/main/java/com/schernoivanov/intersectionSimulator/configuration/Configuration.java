@@ -1,8 +1,10 @@
 package com.schernoivanov.intersectionSimulator.configuration;
+
 import com.schernoivanov.intersectionSimulator.trafficLight.*;
 import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,8 +78,7 @@ public class Configuration {
 
         if (i % 2 != 0) {
             trafficLight.setRoadNumber(RoadNumber.FIRST);
-        }
-        else {
+        } else {
             trafficLight.setRoadNumber(RoadNumber.SECOND);
         }
         return trafficLight;
@@ -100,7 +101,6 @@ public class Configuration {
 
         return trafficLight;
     }
-
 
 
     private void setDependencies(Map<Integer, TrafficLight> trafficLights) {
@@ -199,9 +199,9 @@ public class Configuration {
 
     private void setDependenciesForVehicleTrafficLight(
             TrafficLight v,
-            int [] nearest,
+            int[] nearest,
             int opposite,
-            int [] perpendicular) {
+            int[] perpendicular) {
 
         v.setOppositeTrafficLightId(opposite);
         v.setPerpendicularTrafficLightIds(perpendicular);
@@ -211,7 +211,7 @@ public class Configuration {
     private void setDependenciesForPedestrianTrafficLight(
             TrafficLight v,
             int opposite,
-            int [] perpendicular,
+            int[] perpendicular,
             int parallel,
             int nearest) {
 

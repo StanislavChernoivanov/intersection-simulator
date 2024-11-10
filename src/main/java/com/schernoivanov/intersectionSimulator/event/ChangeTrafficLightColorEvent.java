@@ -1,6 +1,5 @@
 package com.schernoivanov.intersectionSimulator.event;
 
-import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLightColor;
 import lombok.Getter;
 
 @Getter

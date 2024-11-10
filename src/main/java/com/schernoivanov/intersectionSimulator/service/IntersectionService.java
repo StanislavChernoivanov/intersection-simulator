@@ -6,14 +6,13 @@ import java.util.List;
 
 public interface IntersectionService {
 
-     List<TrafficLight> getAllTrafficLight();
+    List<TrafficLight> getAllTrafficLight();
 
-     TrafficLight getTrafficLightById(Integer id);
+    TrafficLight getTrafficLightById(Integer id);
 
-     void changeTrafficLightColorById(Integer id, String newColor) throws InterruptedException;
+    void changeTrafficLightColorById(Integer id, String newColor) throws InterruptedException;
 
-     TrafficLight changeQueueSizeById(Integer id, int queueSize);
-
+    TrafficLight changeQueueSizeById(Integer id, int queueSize);
 
 
 }

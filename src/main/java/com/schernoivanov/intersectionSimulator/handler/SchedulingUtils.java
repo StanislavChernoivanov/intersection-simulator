@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class SchedulingUtils {
 
+
+
     public void scheduleEnablingTrafficLightEventSending(String logInfoSchedulingTrafficLightEnabling,
                                                          long duration,
                                                          TrafficLight sender,
@@ -58,37 +60,6 @@ public class SchedulingUtils {
         );
     }
 
-    public long getDuration(boolean isCompatible,
-                            TrafficLightColor scheduledColor,
-                            long greenColorDuration,
-                            long redColorDuration,
-                            long yellowColorDuration) {
-
-        if(isCompatible) {
-
-            return scheduledColor.equals(TrafficLightColor.GREEN)
-                    ? greenColorDuration : scheduledColor.equals(TrafficLightColor.RED)
-                    ? redColorDuration
-                    : yellowColorDuration;
-        } else {
-
-           return scheduledColor.equals(TrafficLightColor.GREEN)
-                    ? redColorDuration : scheduledColor.equals(TrafficLightColor.RED)
-                    ? greenColorDuration
-                    : yellowColorDuration;
-        }
-    }
-
-    public boolean isEvenRoad(String roadNumber) {
-
-        return !roadNumber.equals(RoadNumber.FIRST.name());
-    }
-
-
-    public boolean isVehicleRoad(TrafficLightType type) {
-
-        return type.equals(TrafficLightType.VEHICLE);
-    }
 
 
 }

@@ -12,7 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
@@ -38,7 +39,7 @@ public class EventHandler {
 
         switch (event.getEventType()) {
             case DISABLE:
-                handleDisableEvent(trafficLight, event);
+                handleDisableEvent(trafficLight);
                 break;
 
             case CHANGE_COLOR:
@@ -46,12 +47,12 @@ public class EventHandler {
                 break;
 
             case CHANGE_QUEUE_SIZE:
-                handleChangeQueueSize(trafficLight, event);
+                handleChangeQueueSize(event);
         }
     }
 
 
-    private void handleDisableEvent(TrafficLight trafficLight, Event<?> event) {
+    private void handleDisableEvent(TrafficLight trafficLight) {
 
         trafficLight.getEventQueue().clear();
 
@@ -67,8 +68,6 @@ public class EventHandler {
     }
 
 
-
-
     private void handleChangeColorEvent(TrafficLight trafficLight, Event<?> event) {
 
         String eventData = (String) event.getEventData();
@@ -79,7 +78,6 @@ public class EventHandler {
 
             case RED:
                 trafficLight.setColor(TrafficLightColor.RED);
-                trafficLight.setStopWatch(StopWatch.createStarted());
 
                 log.info("Состояние светофора (id={}, type={}, road_number={})" +
                                 " - {} - движение запрещено",
@@ -92,7 +90,6 @@ public class EventHandler {
 
             case GREEN:
                 trafficLight.setColor(TrafficLightColor.GREEN);
-                trafficLight.setStopWatch(StopWatch.createStarted());
 
                 log.info("Состояние светофора (id={}, type={}, road_number={}) - " +
                                 "{} - движение разрешено",
@@ -104,7 +101,6 @@ public class EventHandler {
 
             case YELLOW:
                 trafficLight.setColor(TrafficLightColor.YELLOW);
-                trafficLight.setStopWatch(StopWatch.createStarted());
 
                 log.info("Состояние светофора (id={}, type={}, road_number={}) " +
                                 "- {} - через {} секунд движение будет запрещено",
@@ -119,7 +115,7 @@ public class EventHandler {
     }
 
 
-    private void handleChangeQueueSize(TrafficLight trafficLight, Event<?> event) {
+    private void handleChangeQueueSize(Event<?> event) {
 
         TrafficLight sender = trafficLights.get(event.getTrafficLightFromId());
         TrafficLight receiver = trafficLights.get(event.getTrafficLightToId());
@@ -132,7 +128,7 @@ public class EventHandler {
             changeTrafficLightGreenColorDuration(receiver, newQueueSize, currentlyQueueSize);
             changeTrafficLightGreenColorDuration(
                     trafficLights.get(receiver.getOppositeTrafficLightId())
-                    ,newQueueSize
+                    , newQueueSize
                     , currentlyQueueSize);
 
         } else {
@@ -205,8 +201,6 @@ public class EventHandler {
             }
         }
     }
-
-
 
 
     private Optional<String> findKey(TrafficLight receiver) {

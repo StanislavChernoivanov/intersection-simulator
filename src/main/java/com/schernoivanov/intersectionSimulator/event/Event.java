@@ -1,10 +1,12 @@
 package com.schernoivanov.intersectionSimulator.event;
-import lombok.*;
+
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Getter
 @Slf4j
-public abstract class Event<T>{
+public abstract class Event<T> {
 
     private final Integer trafficLightFromId;
 

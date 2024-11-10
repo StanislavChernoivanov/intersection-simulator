@@ -1,4 +1,5 @@
 package com.schernoivanov.intersectionSimulator.handler;
+
 import com.schernoivanov.intersectionSimulator.event.Event;
 import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLight;
 import jakarta.annotation.PostConstruct;
@@ -12,7 +13,7 @@ import java.util.Map;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class EventsConsumerStarter {
+public class EventsHandlingStarter {
 
 
     private final Map<Integer, TrafficLight> trafficLights;
@@ -40,9 +41,6 @@ public class EventsConsumerStarter {
             thread.start();
         });
     }
-
-
-
 
 
 }

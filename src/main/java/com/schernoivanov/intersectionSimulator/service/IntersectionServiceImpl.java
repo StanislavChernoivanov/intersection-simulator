@@ -2,18 +2,14 @@ package com.schernoivanov.intersectionSimulator.service;
 
 import com.schernoivanov.intersectionSimulator.event.ChangeQueueSizeEvent;
 import com.schernoivanov.intersectionSimulator.event.Event;
-import com.schernoivanov.intersectionSimulator.handler.EventHandler;
 import com.schernoivanov.intersectionSimulator.handler.EventScheduler;
-import com.schernoivanov.intersectionSimulator.handler.EventsConsumerStarter;
-import com.schernoivanov.intersectionSimulator.trafficLight.*;
+import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLight;
+import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLightColor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class IntersectionServiceImpl implements IntersectionService{
+public class IntersectionServiceImpl implements IntersectionService {
 
 
     private final Map<Integer, TrafficLight> trafficLights;
@@ -32,6 +28,8 @@ public class IntersectionServiceImpl implements IntersectionService{
 
 
     public List<TrafficLight> getAllTrafficLight() {
+
+        trafficLights.values().forEach(tl -> tl.setTimer(getTrafficLightTimerById(tl)));
         return trafficLights.values().stream().toList();
     }
 
@@ -41,7 +39,7 @@ public class IntersectionServiceImpl implements IntersectionService{
                 .stream()
                 .filter(v -> Objects.equals(v.getId(), id))
                 .findAny()
-                .orElseThrow( () -> new RuntimeException(
+                .orElseThrow(() -> new RuntimeException(
                         MessageFormat.format(
                                 "TrafficLight with id={0} is not found"
                                 , id
@@ -93,7 +91,7 @@ public class IntersectionServiceImpl implements IntersectionService{
         trafficLight.getStopWatch().split();
 
         return MessageFormat.format("Осталось {0} cек",
-            duration - trafficLight.getStopWatch().getSplitDuration().toSeconds()
+                duration - trafficLight.getStopWatch().getSplitDuration().toSeconds()
         );
     }
 
