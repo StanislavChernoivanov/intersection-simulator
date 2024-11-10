@@ -10,9 +10,10 @@ public interface IntersectionService {
 
      TrafficLight getTrafficLightById(Integer id);
 
-     void changeTrafficLightColorById(Integer id, String newColor);
+     void changeTrafficLightColorById(Integer id, String newColor) throws InterruptedException;
 
      TrafficLight changeQueueSizeById(Integer id, int queueSize);
 
-     String getTrafficLightTimerById(Integer id);
+
+
 }

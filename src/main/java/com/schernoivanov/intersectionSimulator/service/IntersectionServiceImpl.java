@@ -1,5 +1,8 @@
 package com.schernoivanov.intersectionSimulator.service;
 
+import com.schernoivanov.intersectionSimulator.event.ChangeQueueSizeEvent;
+import com.schernoivanov.intersectionSimulator.event.Event;
+import com.schernoivanov.intersectionSimulator.handler.EventHandler;
 import com.schernoivanov.intersectionSimulator.handler.EventScheduler;
 import com.schernoivanov.intersectionSimulator.handler.EventsConsumerStarter;
 import com.schernoivanov.intersectionSimulator.trafficLight.*;
@@ -10,9 +13,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -24,21 +30,14 @@ public class IntersectionServiceImpl implements IntersectionService{
 
     private final EventScheduler eventScheduler;
 
-    @Value("${app.traffic-light.default-green-color-duration}")
-    private int greenColorDuration;
-    @Value("${app.traffic-light.default-red-color-duration}")
-    private int redColorDuration;
-    @Value("${app.traffic-light.default-yellow-color-duration}")
-    private int yellowColorDuration;
-
 
     public List<TrafficLight> getAllTrafficLight() {
         return trafficLights.values().stream().toList();
     }
 
     public TrafficLight getTrafficLightById(Integer id) {
-//        log.info(String.valueOf(trafficLights.size()));
-        return trafficLights.values()
+
+        TrafficLight trafficLight = trafficLights.values()
                 .stream()
                 .filter(v -> Objects.equals(v.getId(), id))
                 .findAny()
@@ -48,35 +47,48 @@ public class IntersectionServiceImpl implements IntersectionService{
                                 , id
                         )
                 ));
+
+        trafficLight.setTimer(getTrafficLightTimerById(trafficLight));
+
+        return trafficLight;
     }
 
     @Override
     public void changeTrafficLightColorById(Integer id, String newColor) {
 
-
         TrafficLight trafficLight = getTrafficLightById(id);
-        eventScheduler.lightingControlScheduling(trafficLight, TrafficLightColor.valueOf(newColor));
+
+        try {
+            eventScheduler.lightingControlScheduling(trafficLight, TrafficLightColor.valueOf(newColor));
+        } catch (InterruptedException e) {
+            log.warn(Arrays.toString(e.getStackTrace()));
+        }
     }
 
     @Override
     public TrafficLight changeQueueSizeById(Integer id, int queueSize) {
 
         TrafficLight trafficLight = getTrafficLightById(id);
+
+        Event<Integer> changeQueueSizeEvent = new ChangeQueueSizeEvent(id, id, queueSize);
+
+        trafficLight.addEvent(changeQueueSizeEvent);
+
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            log.warn(Arrays.toString(e.getStackTrace()));
+        }
+
         trafficLight.setQueueSize(queueSize);
 
         return trafficLight;
     }
 
-    @Override
-    public String getTrafficLightTimerById(Integer id) {
 
-        TrafficLight trafficLight = getTrafficLightById(id);
+    private String getTrafficLightTimerById(TrafficLight trafficLight) {
 
-        TrafficLightColor currentlyColor = trafficLight.getColor();
-
-        int duration = currentlyColor.equals(TrafficLightColor.RED) ? redColorDuration
-                : currentlyColor.equals(TrafficLightColor.GREEN) ? greenColorDuration
-                :yellowColorDuration;
+        int duration = trafficLight.getTrafficLightColorDuration();
 
         trafficLight.getStopWatch().split();
 

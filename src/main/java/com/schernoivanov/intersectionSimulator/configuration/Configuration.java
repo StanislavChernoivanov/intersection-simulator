@@ -1,18 +1,46 @@
 package com.schernoivanov.intersectionSimulator.configuration;
 import com.schernoivanov.intersectionSimulator.trafficLight.*;
+import org.apache.commons.lang3.time.StopWatch;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 @org.springframework.context.annotation.Configuration
 public class Configuration {
 
 
+    @Value("${app.traffic-light.default-green-color-duration}")
+    private int greenColorDuration;
+    @Value("${app.traffic-light.default-red-color-duration}")
+    private int redColorDuration;
+    @Value("${app.traffic-light.default-yellow-color-duration}")
+    private int yellowColorDuration;
+    @Value("${app.queue.default-queue-size}")
+    private int defaultQueueSize;
+
+
+    @Bean
+    public Map<String, Integer> trafficLightColorDurations() {
+
+        Map<String, Integer> trafficLightColorDurations = new HashMap<>();
+
+        trafficLightColorDurations.put("red13", redColorDuration);
+        trafficLightColorDurations.put("red24", redColorDuration);
+        trafficLightColorDurations.put("red57911", redColorDuration);
+        trafficLightColorDurations.put("red681012", redColorDuration);
+        trafficLightColorDurations.put("green1357911", greenColorDuration);
+        trafficLightColorDurations.put("green24681012", greenColorDuration);
+        trafficLightColorDurations.put("yellow", yellowColorDuration);
+
+        return trafficLightColorDurations;
+    }
 
     @Bean
     public Map<Integer, TrafficLight> trafficLights() {
-        Map<Integer, TrafficLight> trafficLights = new HashMap<>();
+        Map<Integer, TrafficLight> trafficLights = new ConcurrentHashMap<>();
 
         trafficLightsInit(trafficLights);
         setDependencies(trafficLights);
@@ -21,7 +49,7 @@ public class Configuration {
     }
 
 
-    private static void trafficLightsInit(Map<Integer, TrafficLight> trafficLights) {
+    private void trafficLightsInit(Map<Integer, TrafficLight> trafficLights) {
         for (int i = 1; i < 5; i++) {
 
             TrafficLight trafficLight = getVehicleTrafficLight(i);
@@ -37,12 +65,14 @@ public class Configuration {
         }
     }
 
-    private static TrafficLight getVehicleTrafficLight(int i) {
+    private TrafficLight getVehicleTrafficLight(int i) {
         TrafficLight trafficLight = new VehicleTrafficLight();
         trafficLight.setId(i);
         trafficLight.setEventQueue(new LinkedBlockingQueue<>());
         trafficLight.setTrafficLightType(TrafficLightType.VEHICLE);
         trafficLight.setColor(TrafficLightColor.DISABLED);
+        trafficLight.setQueueSize(defaultQueueSize);
+        trafficLight.setStopWatch(StopWatch.createStarted());
 
         if (i % 2 != 0) {
             trafficLight.setRoadNumber(RoadNumber.FIRST);
@@ -53,12 +83,14 @@ public class Configuration {
         return trafficLight;
     }
 
-    private static TrafficLight getPedestrianTrafficLight(int i) {
+    private TrafficLight getPedestrianTrafficLight(int i) {
         TrafficLight trafficLight = new PedestrianTrafficLight();
         trafficLight.setId(i);
         trafficLight.setEventQueue(new LinkedBlockingQueue<>());
         trafficLight.setTrafficLightType(TrafficLightType.PEDESTRIAN);
         trafficLight.setColor(TrafficLightColor.DISABLED);
+        trafficLight.setQueueSize(defaultQueueSize);
+        trafficLight.setStopWatch(StopWatch.createStarted());
 
         if (i % 2 != 0) {
             trafficLight.setRoadNumber(RoadNumber.FIRST);
@@ -124,7 +156,7 @@ public class Configuration {
 
                 case 7:
                     setDependenciesForPedestrianTrafficLight(
-                            v, 5, new int[]{6, 8}, 12, 1
+                            v, 5, new int[]{6, 8}, 11, 1
                     );
                     break;
 

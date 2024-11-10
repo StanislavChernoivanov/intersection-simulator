@@ -20,4 +20,8 @@ public class TrafficLightDTO {
     private RoadNumber roadNumber;
 
     private TrafficLightColor color;
+
+    private String timer;
+
+    private int currentlyQueueSize;
 }

@@ -8,6 +8,7 @@ import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLightColor;
 import com.schernoivanov.intersectionSimulator.trafficLight.TrafficLightType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -26,14 +27,8 @@ public class EventScheduler {
 
     private final Map<Integer, TrafficLight> trafficLights;
 
-    private final EventsConsumerStarter eventsConsumerStarter;
 
-    @Value("${app.traffic-light.default-green-color-duration}")
-    private int greenColorDuration;
-    @Value("${app.traffic-light.default-red-color-duration}")
-    private int redColorDuration;
-    @Value("${app.traffic-light.default-yellow-color-duration}")
-    private int yellowColorDuration;
+    private final Map<String, Integer> trafficLightColorDurations;
 
     public static boolean isWork = true;
 
@@ -47,19 +42,33 @@ public class EventScheduler {
         ScheduledExecutorService scheduledThreadPool =
                 trafficLightSender.getScheduler();
 
-        trafficLights.values().forEach(tl -> new Thread(() -> {
+        List<Thread> threads = new ArrayList<>();
+        trafficLights.values().forEach(tl -> {
+                Thread thread =new Thread(() -> {
 
                     Event<String> event = new DisableTrafficLightEvent(
                             trafficLightSender.getId(),
                             tl.getId(),
                             TrafficLightColor.DISABLED.name());
 
-                    SchedulingUtils.scheduleDisablingTrafficLightEventSending(tl,
+                    SchedulingUtils.scheduleDisablingTrafficLightEventSending(trafficLightSender,
+                            tl,
                             delay,
                             scheduledThreadPool,
                             event);
 
-                }).start());
+                });
+                thread.start();
+                threads.add(thread);
+        });
+
+        threads.forEach(thread -> {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                log.warn(Arrays.toString(e.getStackTrace()));
+            }
+        });
     }
 
 
@@ -91,7 +100,7 @@ public class EventScheduler {
                 );
 
                 SchedulingUtils.scheduleEnablingTrafficLightEventSending(logInfoSchedulingTrafficLightEnabling, delay,
-                        trafficLightReceiver, scheduledColor, scheduler, event);
+                        trafficLightSender, trafficLightReceiver, scheduledColor, scheduler, event);
 
         } else {
 
@@ -109,7 +118,7 @@ public class EventScheduler {
                 );
 
                 SchedulingUtils.scheduleEnablingTrafficLightEventSending(logInfoSchedulingTrafficLightEnabling, delay,
-                        trafficLightReceiver, scheduledColor, scheduler, event);
+                        trafficLightSender, trafficLightReceiver, scheduledColor, scheduler, event);
             } else {
 
                 Event<String> event = new ChangeTrafficLightColorEvent(
@@ -119,7 +128,7 @@ public class EventScheduler {
                 );
 
                 SchedulingUtils.scheduleEnablingTrafficLightEventSending(logInfoSchedulingTrafficLightEnabling, delay,
-                        trafficLightReceiver, anotherScheduledColor, scheduler, event);
+                        trafficLightSender, trafficLightReceiver, anotherScheduledColor, scheduler, event);
             }
         }
     }
@@ -127,31 +136,24 @@ public class EventScheduler {
 
 
 
-    public void lightingControlScheduling(TrafficLight commonTrafficLight, TrafficLightColor color) {
+    public void lightingControlScheduling(TrafficLight commonTrafficLight, TrafficLightColor color) throws InterruptedException {
+
+        isWork = false;
+
+        TimeUnit.SECONDS.sleep(1);
 
         scheduleSendEventForDisablingAllTrafficLights(commonTrafficLight, 1);
 
-        try {
-            TimeUnit.SECONDS.sleep(1);
-        } catch (InterruptedException e) {
-            log.warn(Arrays.toString(e.getStackTrace()));
-        }
         List<Thread> threads = new ArrayList<>();
         trafficLights.values().forEach(tl -> {
 
-            Thread thread = new Thread( () -> {
-                scheduleSendEventForEnablingAllTrafficLights(commonTrafficLight,
+            Thread thread = new Thread( () ->
+                    scheduleSendEventForEnablingAllTrafficLights(
+                        commonTrafficLight,
                         tl,
                         color,
                         true,
-                        5);
-
-                try {
-                    TimeUnit.SECONDS.sleep(5);
-                } catch (InterruptedException e) {
-                    log.warn(Arrays.toString(e.getStackTrace()));
-                }
-            });
+                        5));
             thread.start();
             threads.add(thread);
         });
@@ -163,6 +165,8 @@ public class EventScheduler {
                 log.info(Arrays.toString(e.getStackTrace()));
             }
         });
+
+        isWork = true;
 
         new Thread( () -> startTrafficLightsWorking(commonTrafficLight)).start();
     }
@@ -188,6 +192,24 @@ public class EventScheduler {
                 Thread thread = new Thread(() -> {
 
                     TrafficLightColor currentlyColor = receiver.getColor();
+                    int duration = 0;
+
+                    if (currentlyColor.equals(TrafficLightColor.RED)) {
+
+                        duration = receiver.getId() % 2 == 0 && receiver.getTrafficLightType().equals(TrafficLightType.VEHICLE) ?
+                                trafficLightColorDurations.get("red24") : receiver.getId() % 2 == 0 ?
+                                trafficLightColorDurations.get("red681012") :
+                                receiver.getTrafficLightType().equals(TrafficLightType.VEHICLE) ?
+                                trafficLightColorDurations.get("red13") : trafficLightColorDurations.get("red57911");
+                    } else if (currentlyColor.equals(TrafficLightColor.GREEN)) {
+
+                        duration = receiver.getId() % 2 == 0
+                                ? trafficLightColorDurations.get("green24681012")
+                                : trafficLightColorDurations.get("green1357911");
+
+                    }
+
+
                     switch (currentlyColor) {
 
                         case GREEN:
@@ -199,10 +221,10 @@ public class EventScheduler {
                                         receiver,
                                         TrafficLightColor.YELLOW,
                                         false,
-                                        greenColorDuration);
+                                        duration);
 
                                 try {
-                                    TimeUnit.SECONDS.sleep(greenColorDuration);
+                                    TimeUnit.SECONDS.sleep(duration);
                                 } catch (InterruptedException e) {
 
                                     log.info(Arrays.toString(e.getStackTrace()));
@@ -214,10 +236,10 @@ public class EventScheduler {
                                         receiver,
                                         TrafficLightColor.RED,
                                         false,
-                                        greenColorDuration);
+                                        duration);
 
                                 try {
-                                    TimeUnit.SECONDS.sleep(greenColorDuration);
+                                    TimeUnit.SECONDS.sleep(duration);
                                 } catch (InterruptedException e) {
 
                                     log.info(Arrays.toString(e.getStackTrace()));
@@ -232,10 +254,10 @@ public class EventScheduler {
                                     receiver,
                                     TrafficLightColor.GREEN,
                                     false,
-                                    redColorDuration);
+                                    duration);
 
                             try {
-                                TimeUnit.SECONDS.sleep(redColorDuration);
+                                TimeUnit.SECONDS.sleep(duration);
                             } catch (InterruptedException e) {
 
                                 log.info(Arrays.toString(e.getStackTrace()));
@@ -249,10 +271,10 @@ public class EventScheduler {
                                     receiver,
                                     TrafficLightColor.RED,
                                     false,
-                                    yellowColorDuration);
+                                    trafficLightColorDurations.get("yellow"));
 
                             try {
-                                TimeUnit.SECONDS.sleep(yellowColorDuration);
+                                TimeUnit.SECONDS.sleep(trafficLightColorDurations.get("yellow"));
                             } catch (InterruptedException e) {
 
                                 log.info(Arrays.toString(e.getStackTrace()));
@@ -271,6 +293,7 @@ public class EventScheduler {
 
         }).start();
     }
+
 
 
 

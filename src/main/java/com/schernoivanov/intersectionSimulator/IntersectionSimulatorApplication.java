@@ -18,18 +18,4 @@ public class IntersectionSimulatorApplication {
 
 	}
 
-	@PostConstruct
-	public void timer() {
-		new Thread( () -> {
-			for (int i =0; i < 10_000; i++) {
-				try {
-					TimeUnit.SECONDS.sleep(1);
-				} catch (InterruptedException e) {
-					throw new RuntimeException(e);
-				}
-				System.out.println(i);
-			}
-		}).start();
-	}
-
 }

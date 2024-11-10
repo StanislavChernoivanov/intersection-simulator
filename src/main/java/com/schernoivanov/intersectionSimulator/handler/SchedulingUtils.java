@@ -17,26 +17,28 @@ public class SchedulingUtils {
 
     public void scheduleEnablingTrafficLightEventSending(String logInfoSchedulingTrafficLightEnabling,
                                                          long duration,
-                                                         TrafficLight tl,
+                                                         TrafficLight sender,
+                                                         TrafficLight receiver,
                                                          TrafficLightColor scheduledColor,
                                                          ScheduledExecutorService scheduler,
                                                          Event<String> event) {
 
         log.debug(logInfoSchedulingTrafficLightEnabling,
                 scheduledColor,
-                tl.getId(),
-                tl.getTrafficLightType(),
-                tl.getRoadNumber(),
+                receiver.getId(),
+                receiver.getTrafficLightType(),
+                receiver.getRoadNumber(),
                 duration);
 
         scheduler.schedule(
-                () -> tl.addEvent(event),
+                () -> sender.sendEvent(event, receiver),
                 duration,
                 TimeUnit.SECONDS
         );
     }
 
-    public void scheduleDisablingTrafficLightEventSending(TrafficLight tl,
+    public void scheduleDisablingTrafficLightEventSending(TrafficLight sender,
+                                                          TrafficLight receiver,
                                                           long delay,
                                                           ScheduledExecutorService scheduler,
                                                           Event<String> event) {
@@ -44,13 +46,13 @@ public class SchedulingUtils {
         log.info(
                 "Запланировано отключение светофора (id={}, type={}, road_number={}) " +
                         "через {} секунды...",
-                tl.getId(),
-                tl.getTrafficLightType(),
-                tl.getRoadNumber(),
+                receiver.getId(),
+                receiver.getTrafficLightType(),
+                receiver.getRoadNumber(),
                 delay);
 
         scheduler.schedule(
-                () -> tl.addEvent(event),
+                () -> sender.sendEvent(event, receiver),
                 delay,
                 TimeUnit.SECONDS
         );
